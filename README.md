@@ -70,12 +70,15 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
     modelBuilder.Entity<Order>().HasTenantQueryFilter(order => order.TenantId, () => TenantId);
 
-// A query can skip that filter without turning the others off:
-var everything = db.Orders.IgnoreQueryFilters([TenantQueryFilter.Name]);
-
     // Or, after every entity is configured, for a shared TenantId column:
     modelBuilder.ApplyTenantQueryFilter<string>(() => TenantId);
 }
+```
+
+A query can skip that filter without turning the others off
+
+```csharp
+var everything = db.Orders.IgnoreQueryFilters([TenantQueryFilter.Name]);
 ```
 
 ## Custom resolver
