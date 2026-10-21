@@ -58,8 +58,12 @@ public sealed class ClaimResolutionStrategy(string claimType) : ITenantResolutio
     }
 }
 
-/// <summary>Reads a tenant identifier from a path segment. Segment 0 is the first segment after the leading slash.</summary>
-public sealed class PathSegmentResolutionStrategy(int segmentIndex = 0) : ITenantResolutionStrategy
+/// <summary>
+/// Reads a tenant identifier from a path segment. Segment 0 is the first segment after the leading slash.
+/// When <paramref name="rewritePath"/> is true, a resolved tenant is removed from the path before the rest of the pipeline runs.
+/// Segment 0 is moved onto <see cref="HttpRequest.PathBase"/> so generated links keep the prefix. Any later segment is removed in place.
+/// </summary>
+public sealed class PathSegmentResolutionStrategy(int segmentIndex = 0, bool rewritePath = false) : ITenantResolutionStrategy
 {
     /// <inheritdoc />
     public string? GetIdentifier(HttpContext context)
@@ -74,6 +78,16 @@ public sealed class PathSegmentResolutionStrategy(int segmentIndex = 0) : ITenan
         }
 
         string[] segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return segmentIndex < segments.Length ? segments[segmentIndex] : null;
+        if (segmentIndex >= segments.Length)
+        {
+            return null;
+        }
+
+        if (rewritePath)
+        {
+            Internal.TenantPath.Mark(context, segmentIndex);
+        }
+
+        return segments[segmentIndex];
     }
 }

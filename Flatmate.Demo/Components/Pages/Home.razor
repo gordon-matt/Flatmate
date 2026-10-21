@@ -1,0 +1,22 @@
+﻿@page "/"
+@inject ICurrentTenant<DemoTenant> Current
+@inject IReadOnlyList<DemoTenant> Tenants
+
+<PageTitle>@(Current.Tenant?.Name ?? "Flatmate")</PageTitle>
+
+@if (Current.Tenant is null)
+{
+    <p class="eyebrow">Flatmate</p>
+    <h1>Choose a tenant</h1>
+    <p>The first path segment is the tenant. It is removed before routing, and the Blazor circuit keeps it.</p>
+    <ul class="tenants">
+        @foreach (var tenant in Tenants)
+        {
+            <li><a href="/@tenant.Id">@tenant.Name</a></li>
+        }
+    </ul>
+}
+else
+{
+    <NotesPanel @rendermode="InteractiveServer" />
+}

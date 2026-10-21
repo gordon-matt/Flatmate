@@ -3,5 +3,7 @@
   <Folder Name="/Solution Items/">
     <File Path="README.md" />
   </Folder>
+  <Project Path="Flatmate.Demo/Flatmate.Demo.csproj" />
+  <Project Path="Flatmate.EntityFrameworkCore/Flatmate.EntityFrameworkCore.csproj" />
   <Project Path="Flatmate.Tests/Flatmate.Tests.csproj" />
 </Solution>

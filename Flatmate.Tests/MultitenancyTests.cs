@@ -286,7 +286,7 @@ public class MultitenancyTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddScoped<ScopeMarker>();
-        services.AddMultitenancy<TestTenant>(builder => builder.Resolve(async (identifier, scope, _) =>
+        services.AddFlatmate<TestTenant>(builder => builder.Resolve(async (identifier, scope, _) =>
         {
             seen = scope;
             await Task.Yield();
@@ -321,14 +321,67 @@ public class MultitenancyTests
     {
         var services = new ServiceCollection();
         var exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddMultitenancy<TestTenant>(_ => { }));
+            () => services.AddFlatmate<TestTenant>(_ => { }));
 
         Assert.Contains("Resolve", exception.Message);
     }
 
+    [Fact]
+    public async Task Path_segment_moves_the_tenant_prefix_onto_the_path_base()
+    {
+        var (provider, app) = CreateApp(
+            tenants => tenants["acme"] = new TestTenant("acme"),
+            configure: builder => builder.IdentifyByPathSegment(rewritePath: true));
+
+        var matched = await SendAsync(provider, app, request =>
+        {
+            request.PathBase = "/app";
+            request.Path = "/acme/orders/";
+            request.QueryString = new QueryString("?x=1");
+        });
+        var root = await SendAsync(provider, app, request => request.Path = "/acme");
+        var missing = await SendAsync(provider, app, request => request.Path = "/missing/orders");
+
+        Assert.Equal("acme", matched.GetTenant<TestTenant>()?.Id);
+        Assert.Equal("/app/acme", matched.Request.PathBase.Value);
+        Assert.Equal("/orders/", matched.Request.Path.Value);
+        Assert.Equal("?x=1", matched.Request.QueryString.Value);
+        Assert.Equal("/acme", root.Request.PathBase.Value);
+        Assert.Equal("/", root.Request.Path.Value);
+        Assert.Equal("/missing/orders", missing.Request.Path.Value);
+        Assert.Equal(string.Empty, missing.Request.PathBase.Value);
+    }
+
+    [Fact]
+    public async Task Path_rewrite_can_remove_a_later_segment_without_changing_the_path_base()
+    {
+        var (provider, app) = CreateApp(
+            tenants => tenants["acme"] = new TestTenant("acme"),
+            configure: builder => builder.IdentifyByPathSegment(1, rewritePath: true));
+
+        var context = await SendAsync(provider, app, request => request.Path = "/api/acme/orders");
+
+        Assert.Equal("acme", context.GetTenant<TestTenant>()?.Id);
+        Assert.Equal(string.Empty, context.Request.PathBase.Value);
+        Assert.Equal("/api/orders", context.Request.Path.Value);
+    }
+
+    [Fact]
+    public async Task Path_segment_leaves_the_path_alone_when_rewrite_is_off()
+    {
+        var (provider, app) = CreateApp(
+            tenants => tenants["acme"] = new TestTenant("acme"),
+            configure: builder => builder.IdentifyByPathSegment());
+
+        var context = await SendAsync(provider, app, request => request.Path = "/acme/orders");
+
+        Assert.Equal("acme", context.GetTenant<TestTenant>()?.Id);
+        Assert.Equal("/acme/orders", context.Request.Path.Value);
+    }
+
     private static (ServiceProvider Provider, RequestDelegate App) CreateApp(
         Action<Dictionary<string, TestTenant>> seed,
-        Action<MultitenancyBuilder<TestTenant>>? configure = null,
+        Action<FlatmateBuilder<TestTenant>>? configure = null,
         Func<TestTenant, IEnumerable<string>>? identifiers = null,
         Action<IApplicationBuilder>? pipeline = null)
     {
@@ -338,7 +391,7 @@ public class MultitenancyTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<ResolveCounter>();
-        services.AddMultitenancy<TestTenant>(builder =>
+        services.AddFlatmate<TestTenant>(builder =>
         {
             if (configure is null)
             {
@@ -368,14 +421,14 @@ public class MultitenancyTests
         services.AddLogging();
         services.AddSingleton<CatalogState>();
         configure?.Invoke(services);
-        services.AddMultitenancy<TestTenant, CatalogResolver>();
+        services.AddFlatmate<TestTenant, CatalogResolver>();
         return services.BuildServiceProvider();
     }
 
     private static RequestDelegate BuildPipeline(IServiceProvider provider, Action<IApplicationBuilder>? pipeline)
     {
         var app = new ApplicationBuilder(provider);
-        app.UseMultitenancy<TestTenant>();
+        app.UseFlatmate<TestTenant>();
         if (pipeline is null)
         {
             app.Run(context =>
@@ -429,10 +482,8 @@ public class MultitenancyTests
     }
 }
 
-internal sealed class TestTenant(string id) : IDisposable
+internal sealed record TestTenant(string Id) : IDisposable
 {
-    public string Id { get; } = id;
-
     public int DisposeCount { get; private set; }
 
     public void Dispose() => DisposeCount++;

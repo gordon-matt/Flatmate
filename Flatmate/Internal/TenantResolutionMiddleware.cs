@@ -23,6 +23,7 @@ internal sealed class TenantResolutionMiddleware<TTenant>(
         {
             logger.LogDebug("Resolved {TenantType} as tenant context {TenantContextId}.", typeof(TTenant).Name, tenantContext.Id);
             context.SetTenantContext(tenantContext);
+            TenantPath.Rewrite(context);
         }
 
         await next(context);

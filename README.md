@@ -2,64 +2,94 @@
 
 Multi-tenancy for ASP.NET Core. Resolve a tenant for each request, inject it, and branch the pipeline per tenant.
 
+`Flatmate.Demo` is a Blazor Server app that uses a path prefix, a connection string per tenant, an EF Core query filter, and a circuit-scoped tenant. Run it from that project and open `/acme` or `/contoso`.
+
 ## Install
 
 ```xml
-<ProjectReference Include="..\Flatmate\src\Flatmate\Flatmate.csproj" />
+<ProjectReference Include="..\Flatmate\Flatmate.csproj" />
+<ProjectReference Include="..\Flatmate.EntityFrameworkCore\Flatmate.EntityFrameworkCore.csproj" />
 ```
 
-## Resolve from a store
+The Entity Framework project is only needed for the query-filter helpers.
 
-Strategies run in order. The first one that returns a value is the identifier passed to `Resolve`. Register authentication before `UseMultitenancy` when a strategy reads claims.
+## Resolve a tenant
+
+Strategies run in order. The first one that returns a value is the identifier passed to `Resolve`. Register authentication before `UseFlatmate` when a strategy reads claims.
 
 ```csharp
-builder.Services.AddMultitenancy<AppTenant>(tenants => tenants
+builder.Services.AddFlatmate<AppTenant>(tenants => tenants
     .IdentifyByHeader("X-Tenant")
     .IdentifyByHost()
+    .UseConnectionString(tenant => tenant.ConnectionString)
     .Resolve(async (identifier, services, cancellationToken) =>
     {
-        var db = services.GetRequiredService<AppDbContext>();
+        var db = services.GetRequiredService<CatalogDbContext>();
         return await db.Tenants.FirstOrDefaultAsync(t => t.Host == identifier, cancellationToken);
     },
     tenant => tenant.Hosts));
 
+builder.Services.AddFlatmateCircuit<AppTenant>();
+builder.Services.AddDbContext<AppDbContext>((services, options) =>
+    options.UseSqlServer(services.GetRequiredService<TenantConnectionString>().Value));
+
 var app = builder.Build();
-app.UseMultitenancy<AppTenant>();
-app.UsePerTenant<AppTenant>((tenant, branch) =>
-{
-    branch.UseMiddleware<TenantSpecificMiddleware>(tenant.Tenant.Id);
-},
-tenant => tenant.Id);
+app.UseFlatmate<AppTenant>();
 ```
 
-`Resolve` receives the request scope, so a scoped `DbContext` works. Return every hostname (or other identifier) from the second callback so an alias hits the same cached tenant. The default cache keeps a resolution for one hour of inactivity. Call `CacheFor` or `DisableCaching` to change that.
+`Resolve` receives the request scope. Return every hostname from the second callback so an alias hits the same cached tenant. The default cache keeps a resolution for one hour of inactivity. `CacheFor` and `DisableCaching` change that.
 
-Inject `ICurrentTenant<AppTenant>` when a request might not have a tenant. Inject `AppTenant` directly when the rest of the pipeline requires one; that registration throws `TenantNotResolvedException` until a tenant has been resolved.
+`UseConnectionString` registers `TenantConnectionString` for the current scope. `ITenantScopeFactory<AppTenant>.CreateScope(tenant)` opens a scope with that tenant already selected, which is how startup code and Blazor components create a `DbContext` without an HTTP request. Do not pool contexts that take the connection string from the scope.
+
+`AddFlatmateCircuit` copies the tenant onto the Blazor circuit. Give the document a `<base href>` that includes the tenant prefix, so the circuit connects on a URL the tenant middleware can see.
+
+Inject `ICurrentTenant<AppTenant>` when a request might not have a tenant. Inject `AppTenant` when one is required; that registration throws `TenantNotResolvedException` until a tenant has been resolved.
 
 ```csharp
 app.UseUnresolvedTenantNotFound<AppTenant>();
-// or
 app.UseUnresolvedTenantRedirect<AppTenant>("/signup", permanent: true);
 app.UsePrimaryHostnameRedirect<AppTenant>(tenant => tenant.PrimaryHost);
 ```
 
-After a tenant's identifiers change, remove the stale entry:
+`IdentifyByPathSegment(rewritePath: true)` removes the tenant segment before routing. Segment 0 is appended to `Request.PathBase`. A later index is removed and the path base stays as it was. Put `UseFlatmate` before `UseRouting`, otherwise endpoint matching still sees the original path.
+
+After a tenant's identifiers change:
 
 ```csharp
 services.GetRequiredService<ITenantCache<AppTenant>>().Evict(oldHost);
 ```
 
-## Custom resolver
+## Query filters
 
-Subclass `MemoryCacheTenantResolver<TTenant>` when resolution needs more than the built-in strategies. The constructor is `(IMemoryCache cache, ILoggerFactory loggerFactory, IOptions<MemoryCacheTenantResolverOptions>? options = null)`, so an existing `: base(cache, loggerFactory)` call still compiles. Override `GetContextIdentifier`, `GetTenantIdentifiers`, and `ResolveFromStoreAsync`.
+Reference `Flatmate.EntityFrameworkCore`. The expression passed as the current key has to be a property on the context. EF Core reads it for each query.
 
 ```csharp
-builder.Services.AddMultitenancy<AppTenant, AppTenantResolver>();
+public string TenantId => currentTenant.Tenant?.Id ?? "";
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<Order>().HasTenantQueryFilter(order => order.TenantId, () => TenantId);
+
+// A query can skip that filter without turning the others off:
+var everything = db.Orders.IgnoreQueryFilters([TenantQueryFilter.Name]);
+
+    // Or, after every entity is configured, for a shared TenantId column:
+    modelBuilder.ApplyTenantQueryFilter<string>(() => TenantId);
+}
 ```
 
-Cache keys are trimmed and compared case-insensitively. Disposable objects stored in `TenantContext<T>.Properties` are disposed when the cache entry is evicted. The tenant object itself is not disposed.
+## Custom resolver
 
-`UsePerTenant` keeps one branch per key. Pass a stable id. The default key is the tenant instance, so a type without value equality builds a new branch whenever the instance changes. Requests that did not resolve a tenant continue down the root pipeline.
+Subclass `MemoryCacheTenantResolver<TTenant>` when resolution needs more than the built-in strategies. The constructor is `(IMemoryCache cache, ILoggerFactory loggerFactory, IOptions<MemoryCacheTenantResolverOptions>? options = null)`. Override `GetContextIdentifier`, `GetTenantIdentifiers`, and `ResolveFromStoreAsync`.
+
+```csharp
+builder.Services.AddFlatmate<AppTenant, AppTenantResolver>();
+builder.Services.AddTenantConnectionString<AppTenant>(tenant => tenant.ConnectionString);
+```
+
+Cache keys are trimmed and compared case-insensitively. Disposable objects in `TenantContext<T>.Properties` are disposed when the cache entry is evicted. The tenant object itself is not. Eviction runs on the thread pool, so it can finish after `Evict` returns.
+
+`UsePerTenant` keeps one branch per key. Pass a stable id. Requests with no tenant continue down the root pipeline.
 
 Cache expiration settings are application-wide: every tenant type shares one `MemoryCacheTenantResolverOptions`.
 

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Flatmate.Internal;
 
-internal sealed class StrategyTenantResolverOptions<TTenant>
+internal sealed record StrategyTenantResolverOptions<TTenant>
     where TTenant : class
 {
     public required IReadOnlyList<ITenantResolutionStrategy> Strategies { get; init; }

@@ -3,7 +3,7 @@ using Flatmate;
 namespace Microsoft.AspNetCore.Http;
 
 /// <summary>Reads and writes the tenant resolved for a request.</summary>
-public static class MultitenancyHttpContextExtensions
+public static class FlatmateHttpContextExtensions
 {
     /// <summary>Stores the resolution for the rest of the request.</summary>
     public static void SetTenantContext<TTenant>(this HttpContext context, TenantContext<TTenant> tenantContext)

@@ -1,0 +1,96 @@
+@inject ICurrentTenant<DemoTenant> Current
+@inject ITenantScopeFactory<DemoTenant> Scopes
+@using Microsoft.EntityFrameworkCore
+
+@if (Current.Tenant is not { } tenant)
+{
+    <h1>No tenant on this circuit</h1>
+    <p>The circuit started without a resolved tenant.</p>
+}
+else
+{
+    <p class="eyebrow">@tenant.Id</p>
+    <h1>@tenant.Name</h1>
+    <p class="meta">Database <code>@Path.GetFileName(tenant.DatabasePath)</code></p>
+
+    <ul class="notes">
+        @foreach (var note in notes)
+        {
+            <li @key="note.Id">@note.Text</li>
+        }
+    </ul>
+
+    <form @onsubmit="AddAsync" @onsubmit:preventDefault="true">
+        <label for="note">New note</label>
+        <div class="composer">
+            <input id="note" @bind="text" @bind:event="oninput" maxlength="200" />
+            <button type="submit" disabled="@string.IsNullOrWhiteSpace(text)">Add</button>
+        </div>
+    </form>
+
+    @if (error is not null)
+    {
+        <p class="error">@error</p>
+    }
+
+    <p class="switch">
+        @foreach (var other in others)
+        {
+            <a href="/@other.Id">@other.Name</a>
+        }
+        <a href="/">All tenants</a>
+    </p>
+}
+
+@code {
+    private readonly List<Note> notes = [];
+    private string text = "";
+    private string? error;
+
+    [Inject]
+    private IReadOnlyList<DemoTenant> Tenants { get; set; } = [];
+
+    private IEnumerable<DemoTenant> others => Tenants.Where(tenant => tenant.Id != Current.Tenant?.Id);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var tenant = Current.Tenant;
+        if (tenant is null)
+        {
+            return;
+        }
+
+        using var scope = Scopes.CreateScope(tenant);
+        var db = scope.ServiceProvider.GetRequiredService<NotesDbContext>();
+        var loaded = await db.Notes.OrderBy(note => note.Id).ToListAsync();
+        notes.Clear();
+        notes.AddRange(loaded);
+    }
+
+    private async Task AddAsync()
+    {
+        var tenant = Current.Tenant;
+        if (tenant is null || string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        error = null;
+
+        try
+        {
+            using var scope = Scopes.CreateScope(tenant);
+            var db = scope.ServiceProvider.GetRequiredService<NotesDbContext>();
+            db.Notes.Add(new Note { TenantId = tenant.Id, Text = text.Trim() });
+            await db.SaveChangesAsync();
+            text = "";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

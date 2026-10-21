@@ -4,10 +4,10 @@ using Flatmate.Internal;
 namespace Microsoft.AspNetCore.Builder;
 
 /// <summary>Adds Flatmate middleware to the request pipeline.</summary>
-public static class MultitenancyApplicationBuilderExtensions
+public static class FlatmateApplicationBuilderExtensions
 {
     /// <summary>Resolves the current tenant and stores it on the request.</summary>
-    public static IApplicationBuilder UseMultitenancy<TTenant>(this IApplicationBuilder app)
+    public static IApplicationBuilder UseFlatmate<TTenant>(this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
         return app.UseMiddleware<TenantResolutionMiddleware<TTenant>>();
