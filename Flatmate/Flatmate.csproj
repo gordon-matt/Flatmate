@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Flatmate</RootNamespace>
+    <Description>Multi-tenancy for ASP.NET Core. Resolve a tenant for each request, inject it, and branch the pipeline per tenant.</Description>
+    <Authors>Matt Gordon</Authors>
+    <PackageTags>multitenancy;multi-tenant;saas;aspnetcore</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

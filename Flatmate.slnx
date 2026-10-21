@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Flatmate/Flatmate.csproj" />
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="Flatmate.Tests/Flatmate.Tests.csproj" />
+</Solution>
