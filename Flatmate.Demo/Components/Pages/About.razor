@@ -1,0 +1,17 @@
+@page "/about"
+@inject ICurrentTenant<DemoTenant> Current
+
+<PageTitle>@(Current.Tenant is null ? "About" : $"About {Current.Tenant.Name}")</PageTitle>
+
+@if (Current.Tenant is not { } tenant)
+{
+    <h1>No tenant for this host</h1>
+    <p>Open one of the hosts in <code>appsettings.json</code>.</p>
+}
+else
+{
+    <p class="eyebrow">@tenant.Url</p>
+    <h1>About @tenant.Name</h1>
+    <p>This page belongs to @tenant.Name. Every host serves its own copy of <code>/about</code>.</p>
+    <SiteNav />
+}

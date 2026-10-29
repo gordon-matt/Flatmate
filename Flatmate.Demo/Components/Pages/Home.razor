@@ -1,6 +1,7 @@
 ﻿@page "/"
 @inject ICurrentTenant<DemoTenant> Current
 @inject IReadOnlyList<DemoTenant> Tenants
+@inject NavigationManager Navigation
 
 <PageTitle>@(Current.Tenant?.Name ?? "Flatmate")</PageTitle>
 
@@ -8,15 +9,30 @@
 {
     <p class="eyebrow">Flatmate</p>
     <h1>Choose a tenant</h1>
-    <p>The first path segment is the tenant. It is removed before routing, and the Blazor circuit keeps it.</p>
+    <p>The request host selects the tenant. Each host is that tenant's site, and a path is a page on that site.</p>
+    <p>Tenants that use one connection string share that database. The query filter keeps each tenant's notes to itself. Set <code>ConnectionString</code> on a tenant to give it a database of its own.</p>
     <ul class="tenants">
         @foreach (var tenant in Tenants)
         {
-            <li><a href="/@tenant.Id">@tenant.Name</a></li>
+            <li>
+                <a href="@TenantHref(tenant)" data-enhance-nav="false">
+                    <span class="tenant-name">@tenant.Name</span>
+                    <span class="meta">@tenant.DatabaseLabel · @tenant.Url</span>
+                </a>
+            </li>
         }
     </ul>
 }
 else
 {
     <NotesPanel @rendermode="InteractiveServer" />
+}
+
+@code {
+    private string TenantHref(DemoTenant tenant)
+    {
+        var current = new Uri(Navigation.BaseUri);
+        int port = current.IsDefaultPort ? -1 : current.Port;
+        return new UriBuilder(current.Scheme, tenant.Url, port, "/").Uri.AbsoluteUri;
+    }
 }

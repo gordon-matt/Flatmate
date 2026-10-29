@@ -88,6 +88,17 @@ a {
     border-radius: 0.75rem;
 }
 
+.tenants .tenant-name {
+    display: block;
+}
+
+.tenants .meta {
+    display: block;
+    margin-top: 0.25rem;
+    color: #57534e;
+    font-size: 0.9rem;
+}
+
 .notes li {
     margin-top: 0.5rem;
 }

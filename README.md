@@ -2,7 +2,22 @@
 
 Multi-tenancy for ASP.NET Core. Resolve a tenant for each request, inject it, and branch the pipeline per tenant.
 
-`Flatmate.Demo` is a Blazor Server app that uses a path prefix, a connection string per tenant, an EF Core query filter, and a circuit-scoped tenant. Run it from that project and open `/acme` or `/contoso`.
+`Flatmate.Demo` is a Blazor Server app. Tenants are the `Tenants` array in `appsettings.json`. `Url` is the host (`acme.localhost`, any port). `Id` is the key stored on each row. The path is a page on that host, so `http://fabrikam.localhost:5218/acme` stays on Fabrikam and is not the Acme site. Tenants that omit `ConnectionString` use `Database:SharedConnectionString`, so small tenants can share one database. A tenant that sets `ConnectionString` uses that database on its own, and two tenants with the same connection string share that one. An EF Core query filter separates rows in a shared database, and the Blazor circuit keeps the tenant. Run the project and open `http://acme.localhost:5218/`, `http://contoso.localhost:5218/`, or `http://fabrikam.localhost:5218/`. Acme and Contoso share `shared.db`. Fabrikam uses `fabrikam.db`.
+
+The sample `Url` values use `.localhost`, which the browser resolves to this machine. To test other hosts, map them to loopback and set each tenant's `Url` to that host. On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as administrator. On macOS or Linux, edit `/etc/hosts`.
+
+```
+127.0.0.1 acme.mysite.local contoso.mysite.local fabrikam.local
+::1 acme.mysite.local contoso.mysite.local fabrikam.local
+```
+
+```json
+{ "Id": "acme", "Name": "Acme", "Url": "acme.mysite.local" },
+{ "Id": "contoso", "Name": "Contoso", "Url": "contoso.mysite.local" },
+{ "Id": "fabrikam", "Name": "Fabrikam", "Url": "fabrikam.local", "ConnectionString": "Data Source=App_Data/fabrikam.db" }
+```
+
+Restart the app and open `http://acme.mysite.local:5218/`. The port is the one in `Properties/launchSettings.json`. On Windows, run `ipconfig /flushdns` when a name still points somewhere else. Names that end in `.local` are also used by mDNS, so give the hosts file a moment before treating a failure as a bad entry.
 
 ## Install
 

@@ -9,9 +9,9 @@
 }
 else
 {
-    <p class="eyebrow">@tenant.Id</p>
+    <p class="eyebrow">@tenant.Url</p>
     <h1>@tenant.Name</h1>
-    <p class="meta">Database <code>@Path.GetFileName(tenant.DatabasePath)</code></p>
+    <p class="meta">@tenant.DatabaseLabel</p>
 
     <ul class="notes">
         @foreach (var note in notes)
@@ -33,24 +33,13 @@ else
         <p class="error">@error</p>
     }
 
-    <p class="switch">
-        @foreach (var other in others)
-        {
-            <a href="/@other.Id">@other.Name</a>
-        }
-        <a href="/">All tenants</a>
-    </p>
+    <SiteNav />
 }
 
 @code {
     private readonly List<Note> notes = [];
     private string text = "";
     private string? error;
-
-    [Inject]
-    private IReadOnlyList<DemoTenant> Tenants { get; set; } = [];
-
-    private IEnumerable<DemoTenant> others => Tenants.Where(tenant => tenant.Id != Current.Tenant?.Id);
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 

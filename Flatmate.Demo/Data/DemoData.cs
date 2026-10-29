@@ -24,7 +24,7 @@ public static class DemoData
             db.Notes.Add(new Note
             {
                 TenantId = tenant.Id,
-                Text = tenant.Id == "acme" ? "Ship the Acme catalog" : "Contoso onboarding checklist"
+                Text = $"Welcome to {tenant.Name}"
             });
             await db.SaveChangesAsync();
         }
