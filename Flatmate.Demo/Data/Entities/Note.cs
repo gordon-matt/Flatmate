@@ -1,4 +1,4 @@
-namespace Flatmate.Demo;
+namespace Flatmate.Demo.Data.Entities;
 
 public sealed class Note
 {

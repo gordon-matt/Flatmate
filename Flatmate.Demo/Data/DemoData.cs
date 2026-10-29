@@ -1,7 +1,7 @@
-using Flatmate;
+using Flatmate.Demo.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Flatmate.Demo;
+namespace Flatmate.Demo.Data;
 
 public static class DemoData
 {

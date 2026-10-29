@@ -1,11 +1,12 @@
 using Flatmate;
 using Flatmate.Demo;
 using Flatmate.Demo.Components;
+using Flatmate.Demo.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var dataDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
+string dataDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 Directory.CreateDirectory(dataDirectory);
 
 DemoTenant[] tenants =

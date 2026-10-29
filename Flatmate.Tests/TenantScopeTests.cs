@@ -1,4 +1,3 @@
-using Flatmate;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -67,7 +66,7 @@ public class TenantScopeTests
         using var scope = provider.CreateScope();
 
         Assert.Throws<TenantNotResolvedException>(
-            () => scope.ServiceProvider.GetRequiredService<TenantConnectionString>());
+            scope.ServiceProvider.GetRequiredService<TenantConnectionString>);
     }
 
     [Fact]

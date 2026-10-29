@@ -16,23 +16,23 @@ internal static class TenantPath
             return;
         }
 
-        var path = context.Request.Path.Value;
+        string? path = context.Request.Path.Value;
         if (string.IsNullOrEmpty(path))
         {
             return;
         }
 
-        var trailingSlash = path.EndsWith('/');
-        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        bool trailingSlash = path.EndsWith('/');
+        string[] segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if ((uint)segmentIndex >= (uint)segments.Length)
         {
             return;
         }
 
-        var removed = segments[segmentIndex];
-        var kept = new string[segments.Length - 1];
-        var target = 0;
-        for (var index = 0; index < segments.Length; index++)
+        string removed = segments[segmentIndex];
+        string[] kept = new string[segments.Length - 1];
+        int target = 0;
+        for (int index = 0; index < segments.Length; index++)
         {
             if (index == segmentIndex)
             {
@@ -53,7 +53,7 @@ internal static class TenantPath
             return;
         }
 
-        var rebuilt = "/" + string.Join('/', kept);
+        string rebuilt = "/" + string.Join('/', kept);
         if (trailingSlash)
         {
             rebuilt += "/";

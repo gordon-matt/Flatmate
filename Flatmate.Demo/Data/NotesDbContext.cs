@@ -1,7 +1,7 @@
-using Flatmate;
+using Flatmate.Demo.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Flatmate.Demo;
+namespace Flatmate.Demo.Data;
 
 public sealed class NotesDbContext : DbContext
 {
@@ -17,8 +17,5 @@ public sealed class NotesDbContext : DbContext
 
     public string TenantId => currentTenant.Tenant?.Id ?? "";
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Note>().HasTenantQueryFilter(note => note.TenantId, () => TenantId);
-    }
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.Entity<Note>().HasTenantQueryFilter(note => note.TenantId, () => TenantId);
 }

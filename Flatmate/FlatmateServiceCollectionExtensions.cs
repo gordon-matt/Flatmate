@@ -101,14 +101,11 @@ public static class FlatmateServiceCollectionExtensions
             var tenant = sp.GetRequiredService<ICurrentTenant<TTenant>>().Tenant
                 ?? throw new TenantNotResolvedException(typeof(TTenant));
 
-            var value = connectionString(tenant);
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw new InvalidOperationException(
-                    $"The connection string selector returned no value for {typeof(TTenant).Name}.");
-            }
-
-            return new TenantConnectionString(value);
+            string? value = connectionString(tenant);
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new InvalidOperationException(
+                    $"The connection string selector returned no value for {typeof(TTenant).Name}.")
+                : new TenantConnectionString(value);
         });
 
         return services;

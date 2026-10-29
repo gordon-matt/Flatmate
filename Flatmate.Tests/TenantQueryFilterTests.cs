@@ -1,4 +1,3 @@
-using Flatmate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -125,8 +124,5 @@ public sealed class ConstantFilterDbContext(DbContextOptions<ConstantFilterDbCon
 {
     public DbSet<Order> Orders => Set<Order>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Order>().HasTenantQueryFilter(order => order.TenantId, () => "acme");
-    }
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.Entity<Order>().HasTenantQueryFilter(order => order.TenantId, () => "acme");
 }
