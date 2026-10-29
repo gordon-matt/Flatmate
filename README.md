@@ -107,7 +107,35 @@ builder.Services.AddTenantConnectionString<AppTenant>(tenant => tenant.Connectio
 
 Cache keys are trimmed and compared case-insensitively. Disposable objects in `TenantContext<T>.Properties` are disposed when the cache entry is evicted. The tenant object itself is not. Eviction runs on the thread pool, so it can finish after `Evict` returns.
 
-`UsePerTenant` keeps one branch per key. Pass a stable id. Requests with no tenant continue down the root pipeline.
+`UsePerTenant` keeps one branch per key. Pass a stable id. Requests with no tenant continue down the root pipeline. It cannot give each tenant its own authentication scheme. Cookie and OpenID Connect options are registered once, and `IConfigureOptions` runs once, so a cookie name set there stays on the first tenant that happened to be current.
+
+## Authentication
+
+Call `UseFlatmate` before `UseAuthentication`. Register the cookie helper after `AddCookie`. It names the cookie from the tenant key and protects it with that key, so one tenant cannot read another's ticket. The key must be stable. `TenantContext<T>.Id` is a new value on every resolution.
+
+```csharp
+builder.Services.AddAuthentication().AddCookie();
+builder.Services.AddTenantCookieAuthentication<AppTenant>(tenant => tenant.Id);
+
+app.UseFlatmate<AppTenant>();
+app.UseAuthentication();
+```
+
+Leave `Cookie.Domain` unset. The cookie is then sent only to the host that set it, so `acme.example.com` and `contoso.example.com` do not share a session. Set `Domain` only when the parent host should receive that cookie. On `localhost` the port is ignored, so the tenant-specific name is what separates those demo hosts.
+
+For a scheme whose client id or secret differs per tenant, replace that options monitor the same way. The callback runs once per scheme and tenant key. Resolve only singleton services from the provider.
+
+```csharp
+builder.Services.AddTenantAuthenticationOptions<AppTenant, OpenIdConnectOptions>(
+    tenant => tenant.Id,
+    (options, tenant, provider) =>
+    {
+        options.ClientId = tenant.ClientId;
+        options.ClientSecret = tenant.ClientSecret;
+        options.DataProtectionProvider = provider.GetRequiredService<IDataProtectionProvider>()
+            .CreateProtector("Flatmate", tenant.Id);
+    });
+```
 
 Cache expiration settings are application-wide: every tenant type shares one `MemoryCacheTenantResolverOptions`.
 

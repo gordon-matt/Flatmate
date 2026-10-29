@@ -1,7 +1,11 @@
 using Flatmate;
 using Flatmate.Internal;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Server.Circuits;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -107,6 +111,55 @@ public static class FlatmateServiceCollectionExtensions
                     $"The connection string selector returned no value for {typeof(TTenant).Name}.")
                 : new TenantConnectionString(value);
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Gives each tenant its own authentication cookie. Call this after <c>AddAuthentication().AddCookie()</c>,
+    /// and call <c>UseFlatmate</c> before <c>UseAuthentication</c> so the request has a tenant when the cookie
+    /// handler reads its options. The cookie stays host-only: do not set <c>Cookie.Domain</c> to a parent site,
+    /// or every subdomain receives it. On localhost the port is ignored, so the tenant-specific name is what
+    /// keeps those hosts apart. <paramref name="tenantKey"/> must be stable. <see cref="TenantContext{TTenant}.Id"/>
+    /// changes on every resolution.
+    /// </summary>
+    public static IServiceCollection AddTenantCookieAuthentication<TTenant>(
+        this IServiceCollection services,
+        Func<TTenant, string> tenantKey)
+        where TTenant : class
+    {
+        return services.AddTenantAuthenticationOptions<TTenant, CookieAuthenticationOptions>(tenantKey, (options, tenant, provider) =>
+        {
+            string key = tenantKey(tenant);
+            options.Cookie.Name = $"{key}.Auth";
+            options.DataProtectionProvider = provider.GetRequiredService<IDataProtectionProvider>()
+                .CreateProtector("Flatmate", key);
+        });
+    }
+
+    /// <summary>
+    /// Replaces the options monitor for <typeparamref name="TOptions"/> so each tenant gets its own instance.
+    /// Use this for an external login scheme whose client id or secret differs per tenant. The callback runs
+    /// once per scheme and tenant key. Resolve only singleton services from <c>provider</c>.
+    /// </summary>
+    public static IServiceCollection AddTenantAuthenticationOptions<TTenant, TOptions>(
+        this IServiceCollection services,
+        Func<TTenant, string> tenantKey,
+        Action<TOptions, TTenant, IServiceProvider> configure)
+        where TTenant : class
+        where TOptions : class
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(tenantKey);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        services.AddHttpContextAccessor();
+        services.AddSingleton<IOptionsMonitor<TOptions>>(provider => new TenantAuthenticationOptionsMonitor<TTenant, TOptions>(
+            provider.GetRequiredService<IOptionsFactory<TOptions>>(),
+            provider.GetRequiredService<IHttpContextAccessor>(),
+            provider,
+            tenantKey,
+            configure));
 
         return services;
     }
