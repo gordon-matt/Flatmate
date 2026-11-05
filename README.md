@@ -1,4 +1,4 @@
-<img src="https://github.com/gordon-matt/Flatmate/blob/master/_Misc/Logo.png" alt="Logo" width="350" />
+<img src="https://github.com/gordon-matt/Flatmate/raw/master/_Misc/Logo.png" alt="Logo" width="350" />
 
 Multi-tenancy for ASP.NET Core. Resolve a tenant for each request, inject it, and branch the pipeline per tenant.
 
