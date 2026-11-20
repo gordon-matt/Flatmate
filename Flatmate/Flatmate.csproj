@@ -9,7 +9,6 @@
 		<Authors>Matt Gordon</Authors>
 		<PackageTags>multitenancy;multi-tenant;saas;aspnetcore</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>1.0.1</Version>
 		<Company>Matt Gordon</Company>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/gordon-matt/Flatmate</PackageProjectUrl>

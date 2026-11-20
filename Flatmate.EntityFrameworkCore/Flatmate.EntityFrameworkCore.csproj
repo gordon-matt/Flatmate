@@ -7,7 +7,6 @@
 		<RootNamespace>Flatmate</RootNamespace>
 		<Description>Entity Framework Core query filters for Flatmate tenants.</Description>
 		<Authors>Matt Gordon</Authors>
-		<Version>1.0.1</Version>
 		<Company>Matt Gordon</Company>
 		<PackageTags>multitenancy;multi-tenant;saas;entityframeworkcore;efcore;query-filters;aspnetcore</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -36,7 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
 	</ItemGroup>
 
 </Project>
